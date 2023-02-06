@@ -26,13 +26,13 @@ _album_name_ = "My Recordings"
 
 
 def copy_and_rename_mp4(nr, source_mp4, new_name, target_dir):
-    new_file_name = nr + "_" + new_name.replace(" ", "_").replace(".", "-") + ".m4v"
+    new_file_name = nr + "_" + new_name.replace(" ", "_").replace(".", "-") + ".mp4"
     new_path = os.path.join(target_dir, new_file_name)
     today = datetime.today().strftime('%Y-%m-%d')
     # if you want to convert the files instead of copying, alter the string below
     # e.g. for m2ts/m2ps to mp4 use the following:  -vcodec libx264 -preset veryfast -crf 20 -acodec ac3 -vf "yadif"
     cmd = '/usr/bin/ffmpeg -loglevel quiet -i {} -codec copy -metadata title=\"{}\" -metadata album=\"{}\" ' \
-          '-metadata copy_date=\"{}\" {}'.format(
+          '-metadata copy_date=\"{}\" "{}"'.format(
         source_mp4, new_name, _album_name_, today, new_path)
     print(cmd)
     os.system(cmd)
@@ -55,16 +55,13 @@ def extract_rpls_metadata(file_path):
     # name_orig = name.decode("utf-8")
     name_orig = name.decode("latin-1")
 
-    # check for expected chars
-    if bytes[0x732] != 0 and bytes[0x733] != 0x14:
-        print("FATAL: {} has not expected bytes at addresses 0x732 and 0x733!\n".format(file_path))
-        exit(5)
 
     # could be vendor specific, adapt if necessary
     file_name_length = 9
-    fc = bytes[0x734:0x734+file_name_length].decode("utf-8")
+    fc = bytes[0x74C:0x74C+file_name_length].decode("utf-8")
     # ft = fc[-4:].lower()
     # video_file_name = fc[:-4] + "." + ft
+    print("Value is {}",fc)
     mp4_file_name = fc[:-4] + ".mp4"
 
     print("found {} for {} in {}".format(name_orig, mp4_file_name, os.path.basename(file_path)))
@@ -87,10 +84,6 @@ def main(rpls_dir, mp4_dir, target_dir):
     mp4_files.sort()
     print(mp4_files)
 
-    if len(rpl_files) != len(mp4_files):
-        print("ERROR: content of directories aren't matching!\n")
-        exit(1)
-
     for i in range(0, len(rpl_files)):
         cur_rpl = rpl_files[i]
         new_name, mp4_file_name = extract_rpls_metadata(cur_rpl)
@@ -100,7 +93,6 @@ def main(rpls_dir, mp4_dir, target_dir):
             del mp4_files[di]
         else:
             print("FATAL: extracted file that does not exist: {} from {}.\n".format(cur_mp4, cur_rpl))
-            exit(6)
         copy_and_rename_mp4("{:04d}".format(i), cur_mp4, new_name, target_dir)
 
     print("\n\tDONE.\n")
